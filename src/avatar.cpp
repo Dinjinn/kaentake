@@ -5,6 +5,8 @@
 #include "wvs/iteminfo.h"
 #include "wvs/util.h"
 #include "ztl/ztl.h"
+#include "rainbownames/rainbownames.h"
+#include "customactions/customactions.h"
 #include <windows.h>
 
 // Change tamingMob ID from 1983XXX -> 1939XXX
@@ -15,6 +17,7 @@ void CAvatar::Constructor_hook() {
     CAvatar::Constructor(this);
     auto p = new CustomData{};
     m_pCustomData = p;
+    CustomActions::OnAvatarConstructed(this);
 }
 
 void CAvatar::Destructor_hook() {
@@ -80,6 +83,7 @@ public:
 
 void CUser::Update_hook() {
     CUser::Update(this);
+    RainbowNames::OnUserUpdate(this);
     POINT p = m_CAvatar.m_pCustomData->ptBodyRelMove;
     if (p.x || p.y) {
         m_CAvatar.m_pBodyOrigin->RelMove(p.x, p.y);
@@ -132,4 +136,8 @@ void AttachAvatarDataMod() {
     // Implement bodyRelMove
     ATTACH_HOOK(CUser::Update, CUser::Update_hook);
     ATTACH_HOOK(CUser::SetActivePortableChair, CUser::SetActivePortableChair_hook);
+}
+
+void AttachRainbowNames() {
+    RainbowNames::Attach();
 }

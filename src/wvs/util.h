@@ -1,5 +1,5 @@
 #pragma once
-#include "ztl/ztl.h"
+#include "../ztl/ztl.h"
 
 inline IWzGr2DPtr& get_gr() {
     return *reinterpret_cast<IWzGr2DPtr*>(0x00BF14EC);

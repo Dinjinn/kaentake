@@ -1,0 +1,4 @@
+interface:
+  display_name: "Kaentake Build and Deploy"
+  short_description: "Build and deploy Kaentake with short commands"
+  default_prompt: "Use $kaentake-build-deploy to build or deploy Kaentake."

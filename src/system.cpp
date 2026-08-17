@@ -1,4 +1,5 @@
 #include "pch.h"
+#include "crashlog.h"
 #include "hook.h"
 #include "constants.h"
 
@@ -20,7 +21,8 @@ LPTOP_LEVEL_EXCEPTION_FILTER WINAPI SetUnhandledExceptionFilter_hook(LPTOP_LEVEL
     if (reinterpret_cast<uintptr_t>(_ReturnAddress()) == 0x00796FDD) {
         AttachClientHooks();
     }
-    return SetUnhandledExceptionFilter_orig(lpTopLevelExceptionFilter);
+    SetCrashLoggerFallback(lpTopLevelExceptionFilter);
+    return SetUnhandledExceptionFilter_orig(CrashUnhandledExceptionFilter);
 }
 
 

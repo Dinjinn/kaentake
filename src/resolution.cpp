@@ -12,6 +12,7 @@
 #include "wvs/field.h"
 #include "wvs/rtti.h"
 #include "wvs/util.h"
+#include "damagerank/uiDamageRank.h"
 #include "ztl/ztl.h"
 
 #include <windows.h>
@@ -120,6 +121,9 @@ void __cdecl set_stage_hook(CStage* pStage, void* pParam) {
     set_stage(pStage, pParam);
     // !CInterStage::ms_RTTI_CInterStage - change resolution after set_stage
     if (pStage && !pStage->IsKindOf(reinterpret_cast<const CRTTI*>(0x00BED874))) {
+        // Left the field for a non-field, non-inter stage: hide + reset DamageRank.
+        CUIDamageRank::GetInstance().SetVisible(false);
+        CDamageRankData::GetInstance().Reset();
         set_screen_resolution(0, 0);
     }
 }

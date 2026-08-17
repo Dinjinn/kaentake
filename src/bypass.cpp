@@ -7,7 +7,25 @@
 #include "wvs/packet.h"
 #include "wvs/exception.h"
 #include "wvs/util.h"
+#include "weapontint/weapontint.h"
+#include "cashshop/cashshopwnd.h"
+#include "damagerank/uiDamageRank.h"
+#include "autologin/autologin.h"
+#include "autologin/autologin_hooks.h"
 #include "ztl/ztl.h"
+
+// DamageRank mouse routing lives in uiDamageRank.cpp; it never consumes the
+// message (returns true on WM_LBUTTONDOWN only as a focus-clear signal).
+extern bool DamageRank_HandleMouseMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT* plResult);
+
+// Clear CWndMan focus after a DamageRank click so the hit shell keeping focus
+// cannot swallow subsequent field/player keys.
+static void ClearDamageRankFocus(CWndMan* wndMan) {
+    if (!wndMan) {
+        return;
+    }
+    reinterpret_cast<void(__thiscall*)(CWndMan*, void*)>(0x009E3264)(wndMan, nullptr);
+}
 
 #include <windows.h>
 #include <comdef.h>
@@ -227,6 +245,9 @@ void CWvsApp::CallUpdate_hook(int tCurTime) {
         m_tUpdateTime = tCurTime;
         m_bFirstUpdate = 0;
     }
+    // Acts on the receive thread's "open the cash shop window" flag; a CWnd can
+    // only be created here on the main thread, before the stage update loop.
+    CashShopWnd_Tick();
     while (tCurTime - m_tUpdateTime > 0) {
         auto pStage = get_stage();
         if (pStage) {
@@ -244,6 +265,7 @@ void CWvsApp::CallUpdate_hook(int tCurTime) {
         // CActionMan::GetInstance()->SweepCache();
         reinterpret_cast<void(__thiscall*)(CActionMan*)>(0x00411BBB)(CActionMan::GetInstance());
     }
+    WeaponTint_Tick();
 }
 
 void CWvsApp::Run_hook(int* pbTerminate) {
@@ -326,17 +348,6 @@ public:
     virtual ~CSystemInfo() = default;
 };
 
-class CLogin {
-public:
-    struct WORLDITEM;
-    struct BALLOON;
-
-    MEMBER_AT(int, 0x170, m_bRequestSent)
-    MEMBER_AT(ZArray<WORLDITEM>, 0x18C, m_aWorldItem)
-    MEMBER_AT(ZArray<BALLOON>, 0x204, m_aBalloon)
-    MEMBER_HOOK(int, 0x005F6952, SendCheckPasswordPacket, char* sID, char* sPasswd)
-};
-
 int CLogin::SendCheckPasswordPacket_hook(char* sID, char* sPasswd) {
     if (m_bRequestSent) {
         return 0;
@@ -365,12 +376,23 @@ int CLogin::SendCheckPasswordPacket_hook(char* sID, char* sPasswd) {
 
 
 int CWndMan::TranslateMessage_hook(UINT& msg, WPARAM& wParam, LPARAM& lParam, LRESULT* plResult) {
+    // Let DamageRank see the mouse first (drag / wheel-scroll its own list). It
+    // never consumes, so native dispatch below is unchanged.
+    const bool damageRankMouse = DamageRank_HandleMouseMessage(msg, wParam, lParam, plResult);
+
+    int result;
     if (msg == WM_MOUSEWHEEL) {
         // CWndMan::ProcessMouse(this, msg, wParam, lParam);
         *plResult = reinterpret_cast<LRESULT(__thiscall*)(CWndMan*, UINT, WPARAM, LPARAM)>(0x009E3AE6)(this, msg, wParam, lParam);
-        return 0;
+        result = 0;
+    } else {
+        result = CWndMan::TranslateMessage(this, msg, wParam, lParam, plResult);
     }
-    return CWndMan::TranslateMessage(this, msg, wParam, lParam, plResult);
+
+    if (damageRankMouse && msg == WM_LBUTTONDOWN) {
+        ClearDamageRankFocus(this);
+    }
+    return result;
 }
 
 

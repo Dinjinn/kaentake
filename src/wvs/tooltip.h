@@ -32,6 +32,10 @@ public:
     void ClearToolTip() {
         reinterpret_cast<void(__thiscall*)(CUIToolTip*)>(0x008E6E23)(this);
     }
+    // ?SetToolTip_String2@CUIToolTip@@QAEXJJV?$ZXString@D@@0HHHJHH@Z
+    void SetToolTip_String2(int nX, int nY, ZXString<char> sTitle, ZXString<char> sDesc, int a5, int a6, int a7, int nWidth, int a9, int a10) {
+        reinterpret_cast<void(__thiscall*)(CUIToolTip*, int, int, ZXString<char>, ZXString<char>, int, int, int, int, int, int)>(0x008E7150)(this, nX, nY, sTitle, sDesc, a5, a6, a7, nWidth, a9, a10);
+    }
     void AddInfoEx(int nType, int nSubType, ZXString<char> sContext, ZXString<char> sSubContext, int bUseDot, int nAlign) {
         reinterpret_cast<void(__thiscall*)(CUIToolTip*, int, int, ZXString<char>, ZXString<char>, int, int)>(0x008F39E1)(this, nType, nSubType, sContext, sSubContext, bUseDot, nAlign);
     }

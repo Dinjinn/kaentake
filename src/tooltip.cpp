@@ -26,6 +26,8 @@ public:
     MEMBER_AT(ZtlSecure<short>, 0x9C, niSpeed)
     MEMBER_AT(ZtlSecure<short>, 0xA4, niJump)
     MEMBER_AT(ZtlSecure<short>, 0xAC, nAttribute)
+        // Fusion Anvil transmog: int at offset 0xF9 holds the "skin" item id.
+    MEMBER_AT(int, 0xF9, nAnvilItemID)
 };
 
 
@@ -82,9 +84,68 @@ void CUIToolTip::SetToolTip_Equip_Basic_hook(GW_ItemSlotEquip* pe) {
     if (pEquipItem->nRUC) {
         PrintValue(PT_VALUE, pe->nRUC, "NUMBER OF UPGRADES AVAILABLE :", 1);
     }
+        // Fusion Anvil: append a line showing the skin item's name with a
+    // "(Transmog)" tag so the player can see what the appearance is.
+    if (pe->nAnvilItemID != 0) {
+        ZXString<char> sSkinName;
+        reinterpret_cast<ZXString<char>*(__thiscall*)(CItemInfo*, ZXString<char>*, int)>(0x005CF63E)(
+            CItemInfo::GetInstance(), &sSkinName, pe->nAnvilItemID);
+
+        ZXString<char> sLine;
+        sLine.Format("%s (Transmog)", sSkinName);
+        AddInfoEx(14, 15, "APPEARANCE :", sLine, 1, 1001);
+    }
+}
+// ===========================================================================
+// Transmog corner icon — draw the skin item's small icon in the top-right
+// corner of the main equip tooltip's canvas after the engine has rendered it.
+// ===========================================================================
+
+static auto CUIToolTip__DrawToolTip_Equip =
+    reinterpret_cast<void(__thiscall*)(CUIToolTip*, int, GW_ItemSlotEquip*)>(0x008ED0D2);
+
+// Global default tooltip/basic font getter (v83 uses Dotum 12).
+static auto get_basic_font =
+    reinterpret_cast<IWzFontPtr*(__cdecl*)(IWzFontPtr*, int)>(0x0098A707);
+
+void __fastcall CUIToolTip__DrawToolTip_Equip_hook(
+    CUIToolTip* pThis, void* /*edx*/, int a2, GW_ItemSlotEquip* pe)
+{
+    CUIToolTip__DrawToolTip_Equip(pThis, a2, pe);
+    if (!pe || !pe->nAnvilItemID || !pThis || !pThis->m_pLayer) return;
+    try {
+        Ztl_variant_t vIdx;
+        V_VT(&vIdx) = VT_I4;
+        V_I4(&vIdx) = 0;
+        IWzCanvasPtr pCanvas = pThis->m_pLayer->Getcanvas(vIdx);
+        if (!pCanvas) return;
+
+        // Top-right corner — icons are anchored at bottom-left, so y is the
+        // baseline. 32x32 icon, 14px padding from right edge, 6px from top.
+        int iconX = pThis->m_nWidth - 32 - 14;
+        int iconBaselineY = 6 + 32;
+        CItemInfo::GetInstance()->DrawItemIconForSlot(
+            pCanvas, pe->nAnvilItemID, iconX, iconBaselineY, 0, 0, 0, 1, 0, 1);
+
+        // "Transmog" label directly under the icon.
+        IWzFontPtr pFont;
+        get_basic_font(std::addressof(pFont), 0);
+        if (pFont) {
+            pCanvas->DrawTextA(
+                iconX - 12, iconBaselineY + 2,
+                Ztl_bstr_t(L"Transmog"),
+                pFont, Ztl_variant_t(), Ztl_variant_t());
+        }
+    } catch (...) {}
 }
 
+// The tooltip backdrop colour is NOT patched here: gamemods.cpp's
+// TOOLTIP_COLORS feature already owns all 14 push sites feeding
+// CUIToolTip::MakeLayer's fill, driven by Config::TOOLTIP_COLOR. Change the
+// colour in config.h; a second patcher here would just fight over the bytes
+// (attach order decided the winner, silently).
 
 void AttachToolTipMod() {
     ATTACH_HOOK(CUIToolTip::SetToolTip_Equip_Basic, CUIToolTip::SetToolTip_Equip_Basic_hook);
+    ATTACH_HOOK(CUIToolTip__DrawToolTip_Equip, CUIToolTip__DrawToolTip_Equip_hook);
 }

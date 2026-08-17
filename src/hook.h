@@ -27,7 +27,7 @@
 
 #define MEMBER_ARRAY_AT(T, OFFSET, NAME, N) \
     __declspec(property(get = get_##NAME)) T(&NAME)[N]; \
-    __forceinline T(&get_##NAME())[N] { \
+    __forceinline T(&get_##NAME()) [N] { \
         return *reinterpret_cast<T(*)[N]>(reinterpret_cast<uintptr_t>(this) + OFFSET); \
     }
 
@@ -45,6 +45,8 @@ void AttachSystemHooks();
 
 // called in system.cpp -> SetUnhandledExceptionFilter_hook
 void AttachClientBypass();
+void AttachAutoLoginHooks();
+void AttachCustomSkills();
 void AttachClientInlink();
 void AttachStringPoolMod();
 void AttachResManMod();
@@ -55,12 +57,27 @@ void AttachMobHpTagMod();
 void AttachToolTipMod();
 void AttachIconIconMod();
 void AttachTempStatMod();
+void InitializeTempStatAssets();
+void AttachBagWindowMod();
+void AttachFusionAnvilMod();
+void AttachGameMods();
+void AttachWeaponTintMod();
+void AttachColoringPrismMod();
+void AttachCompactStorageMod();
+void AttachSlotLockMod();
+void AttachMapInfoToolTip();
+void AttachDamageRankHotkey();
+void AttachRainbowNames();
+void AttachCustomActions();
 
 inline void AttachClientHooks() {
     AttachClientBypass();
+    AttachAutoLoginHooks();
+    AttachCustomSkills();
     AttachClientInlink();
     AttachStringPoolMod();
     AttachResManMod();
+    AttachCustomActions();
     AttachAvatarDataMod();
     AttachItemEffectMod();
     AttachResolutionMod();
@@ -68,6 +85,16 @@ inline void AttachClientHooks() {
     AttachToolTipMod();
     AttachIconIconMod();
     AttachTempStatMod();
+    AttachBagWindowMod();
+    AttachFusionAnvilMod();
+    AttachGameMods();
+    AttachWeaponTintMod();
+    AttachColoringPrismMod();
+    AttachCompactStorageMod();
+    AttachSlotLockMod();
+    AttachMapInfoToolTip();
+    AttachDamageRankHotkey();
+    AttachRainbowNames();
 }
 
 

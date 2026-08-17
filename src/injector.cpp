@@ -1,5 +1,7 @@
 #include "pch.h"
 #include "hook.h"
+#include "autologin/autologin.h"
+#include "crashlog.h"
 #include "constants.h"
 #include "ztl/ztl.h"
 #include <windows.h>
@@ -46,8 +48,10 @@ BOOL WINAPI DllMain(HINSTANCE hModule, DWORD fdwReason, LPVOID lpvReserved) {
     switch (fdwReason) {
     case DLL_PROCESS_ATTACH:
         DisableThreadLibraryCalls(hModule);
+        InstallCrashLogger();
         ProcessCommandLine();
         ProcessConfigFile();
+        AutoLogin::LoadConfiguration();
         AttachSystemHooks();
         break;
     case DLL_PROCESS_DETACH:

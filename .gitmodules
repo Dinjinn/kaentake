@@ -5,3 +5,6 @@
 	path = external/WzLib
 	url = https://github.com/iw2d/WzLib.git
 	branch = v83_DX8to9
+[submodule "external/StackWalker"]
+	path = external/StackWalker
+	url = https://github.com/JochenKalmbach/StackWalker.git

@@ -1,9 +1,11 @@
 #include "pch.h"
+#include "config.h"
 #include "hook.h"
 #include "debug.h"
 #include "wvs/wvsapp.h"
 #include "wvs/util.h"
 #include "ztl/ztl.h"
+#include "customactions/customactions.h"
 #include <algorithm>
 #include <vector>
 #include <tuple>
@@ -37,6 +39,10 @@ public:
     HRESULT __stdcall raw_Serialize_hook(IWzArchive* pArchive) {
         HRESULT hr = raw_Serialize_orig(this, pArchive);
         if (FAILED(hr)) {
+            return hr;
+        }
+        CustomActions::OnPropertySerialized(this, pArchive);
+        if constexpr (!Config::CUSTOM_PROPERTY_MERGE) {
             return hr;
         }
         if (!std::binary_search(g_vecOverrides.begin(), g_vecOverrides.end(), pArchive->absoluteUOL)) {
@@ -93,41 +99,50 @@ void CWvsApp::InitializeResMan_hook() {
     pPackage->Init(L"83", L"Custom", pArchive);
     g_pCustomNameSpace->Mount(L"/", pPackage, 1);
 
-    // iterate custom namespace
-    std::vector<std::tuple<Ztl_bstr_t, IEnumVARIANTPtr>> stack;
-    stack.emplace_back(L"", g_pCustomNameSpace->_NewEnum);
-    while (!stack.empty()) {
-        auto [sPath, pEnum] = stack.back();
-        stack.pop_back();
+    // Cache the Custom.wz cooldown digits after the package is mounted but
+    // before custom-action property injection mutates any serialized trees.
+    // InitializeTempStatAssets falls back to the native UIWindowEx path when
+    // the custom package does not provide the number set.
+    InitializeTempStatAssets();
+    CustomActions::OnCustomWzMounted();
 
-        while (true) {
-            Ztl_variant_t vNext;
-            ULONG uCeltFetched;
-            if (FAILED(pEnum->Next(1, &vNext, &uCeltFetched)) || uCeltFetched == 0) {
-                break;
-            }
-            Ztl_bstr_t sUOL = (sPath.length() > 0 ? sPath + L"/" : L"") + V_BSTR(&vNext);
-            Ztl_variant_t vObj = get_rm()->GetObjectA(L"Custom/" + sUOL);
-            IUnknownPtr pUnk = vObj.GetUnknown();
-            if (pUnk) {
-                IWzNameSpacePtr pSub;
-                if (SUCCEEDED(pUnk->QueryInterface(&pSub))) {
-                    stack.emplace_back(sUOL, pSub->_NewEnum);
-                    continue;
+    if constexpr (Config::CUSTOM_PROPERTY_MERGE) {
+        // Build the list used only by the legacy native-path override feature.
+        std::vector<std::tuple<Ztl_bstr_t, IEnumVARIANTPtr>> stack;
+        stack.emplace_back(L"", g_pCustomNameSpace->_NewEnum);
+        while (!stack.empty()) {
+            auto [sPath, pEnum] = stack.back();
+            stack.pop_back();
+
+            while (true) {
+                Ztl_variant_t vNext;
+                ULONG uCeltFetched;
+                if (FAILED(pEnum->Next(1, &vNext, &uCeltFetched)) || uCeltFetched == 0) {
+                    break;
                 }
-                IWzPropertyPtr pProp;
-                if (SUCCEEDED(pUnk->QueryInterface(&pProp))) {
-                    stack.emplace_back(sUOL, pProp->_NewEnum);
+                Ztl_bstr_t sUOL = (sPath.length() > 0 ? sPath + L"/" : L"") + V_BSTR(&vNext);
+                Ztl_variant_t vObj = get_rm()->GetObjectA(L"Custom/" + sUOL);
+                IUnknownPtr pUnk = vObj.GetUnknown();
+                if (pUnk) {
+                    IWzNameSpacePtr pSub;
+                    if (SUCCEEDED(pUnk->QueryInterface(&pSub))) {
+                        stack.emplace_back(sUOL, pSub->_NewEnum);
+                        continue;
+                    }
+                    IWzPropertyPtr pProp;
+                    if (SUCCEEDED(pUnk->QueryInterface(&pProp))) {
+                        stack.emplace_back(sUOL, pProp->_NewEnum);
+                    }
                 }
+                g_vecOverrides.push_back(sUOL);
             }
-            g_vecOverrides.push_back(sUOL);
         }
-    }
-    std::sort(g_vecOverrides.begin(), g_vecOverrides.end()); // uses operator<
+        std::sort(g_vecOverrides.begin(), g_vecOverrides.end()); // uses operator<
 
-    // NameSpace.dll - try resolving from g_pCustomNameSpace
-    IWzNameSpaceImpl::raw__OnGetLocalObject_orig = static_cast<IWzNameSpaceImpl::raw__OnGetLocalObject_t>(GetAddressByPattern("NAMESPACE.DLL", "B8 ?? ?? ?? ?? E8 ?? ?? ?? ?? 81 EC 80"));
-    ATTACH_HOOK(IWzNameSpaceImpl::raw__OnGetLocalObject_orig, IWzNameSpaceImpl::raw__OnGetLocalObject_hook);
+        // NameSpace.dll - try resolving from g_pCustomNameSpace
+        IWzNameSpaceImpl::raw__OnGetLocalObject_orig = static_cast<IWzNameSpaceImpl::raw__OnGetLocalObject_t>(GetAddressByPattern("NAMESPACE.DLL", "B8 ?? ?? ?? ?? E8 ?? ?? ?? ?? 81 EC 80"));
+        ATTACH_HOOK(IWzNameSpaceImpl::raw__OnGetLocalObject_orig, IWzNameSpaceImpl::raw__OnGetLocalObject_hook);
+    }
 
     // PCOM.dll - patch CWzProperty objects during serialization
     CWzProperty::raw_Serialize_orig = static_cast<CWzProperty::raw_Serialize_t>(GetAddressByPattern("PCOM.DLL", "B8 ?? ?? ?? ?? E8 ?? ?? ?? ?? 83 EC 68"));

@@ -1,4 +1,5 @@
 #include "pch.h"
+#include "config.h"
 #include "hook.h"
 #include "wvs/util.h"
 #include "ztl/ztl.h"
@@ -83,8 +84,14 @@ IUnknown* __fastcall Ztl_variant_t__GetUnknown_hook(Ztl_variant_t* pThis, void* 
 
 
 void AttachClientInlink() {
-    CWzCanvas::raw_Serialize_orig = reinterpret_cast<CWzCanvas::raw_Serialize_t>(GetAddressByPattern("CANVAS.DLL", "B8 ?? ?? ?? ?? E8 ?? ?? ?? ?? 83 EC 6C"));
-    ATTACH_HOOK(CWzCanvas::raw_Serialize_orig, CWzCanvas::raw_Serialize_hook);
-    ATTACH_HOOK(get_unknown_orig, get_unknown_hook);
-    ATTACH_HOOK(Ztl_variant_t__GetUnknown, Ztl_variant_t__GetUnknown_hook); // for cases where nexon uses this instead of get_unknown
+    if constexpr (Config::INLINK_CANVAS_SERIALIZE) {
+        CWzCanvas::raw_Serialize_orig = reinterpret_cast<CWzCanvas::raw_Serialize_t>(
+                GetAddressByPattern("CANVAS.DLL", "B8 ?? ?? ?? ?? E8 ?? ?? ?? ?? 83 EC 6C"));
+        ATTACH_HOOK(CWzCanvas::raw_Serialize_orig, CWzCanvas::raw_Serialize_hook);
+    }
+    if constexpr (Config::INLINK_GET_UNKNOWN_HOOKS) {
+        ATTACH_HOOK(get_unknown_orig, get_unknown_hook);
+        ATTACH_HOOK(Ztl_variant_t__GetUnknown,
+                Ztl_variant_t__GetUnknown_hook); // alternate native conversion path
+    }
 }

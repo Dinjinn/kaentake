@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "hook.h"
+#include "weapontint/weapontint.h"
 #include "wvs/avatar.h"
 #include "wvs/iteminfo.h"
 #include "wvs/util.h"
@@ -52,13 +53,16 @@ void UpdateItemEff(CUser* pUser) {
         if (auto search = g_mPropItemEffect.find(nItemID); search != g_mPropItemEffect.end()) {
             int bFlip = pAvatar->m_pLayerUnderFace->flip;
             int nAction = pAvatar->GetCurrentAction(nullptr);
+            unsigned int uTintKey = WeaponTint_EffectKeyForAvatar(pAvatar, nItemID);
             if (pItemEffectLayer->nItemID == nItemID && pItemEffectLayer->nAction == nAction &&
-                (!pItemEffectLayer->l.bFixed && pItemEffectLayer->bFlip == bFlip)) {
+                (!pItemEffectLayer->l.bFixed && pItemEffectLayer->bFlip == bFlip) &&
+                pItemEffectLayer->uTintKey == uTintKey) {
                 continue;
             }
             pItemEffectLayer->nItemID = nItemID;
             pItemEffectLayer->nAction = nAction;
             pItemEffectLayer->bFlip = bFlip;
+            pItemEffectLayer->uTintKey = uTintKey;
 
             // resolve UOL
             Ztl_bstr_t sActionName;
@@ -69,10 +73,13 @@ void UpdateItemEff(CUser* pUser) {
             wchar_t sUOL[1024];
             swprintf(sUOL, 1024, L"Effect/ItemEff.img/%d/effect/%ls", nItemID, vAction.vt == VT_EMPTY ? L"default" : sActionName.GetBSTR());
 
-            // load layer and animate
+            // load layer and animate, with the Effects-tab tint swapped in for
+            // exactly the duration of the build
+            WeaponTint_BeginItemEffSwap(pAvatar, nItemID);
             if (pUser->LoadLayer(sUOL, bFlip, pItemEffectLayer->l, nullptr)) {
                 pItemEffectLayer->l.pLayer->Animate(GA_REPEAT);
             }
+            WeaponTint_EndItemEffSwap();
         } else {
             pItemEffectLayer->Reset();
         }

@@ -1,4 +1,30 @@
-.idea
-.vs
-.vscode
-build/
+# Local Kaentake configuration (commit the example file instead)
+/.kaentake.local.json
+
+# IDE and editor state
+/.idea/
+/.vs/
+/.vscode/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# CMake build trees and generated metadata
+/build/
+/build-*/
+/cmake-build-*/
+/out/
+/CMakeUserPresets.json
+/compile_commands.json
+/.cache/
+
+# Runtime and diagnostic output
+*.dmp
+*.log
+*.pdb
+
+# Operating-system metadata
+.DS_Store
+Thumbs.db
+Desktop.ini

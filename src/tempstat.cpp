@@ -9,12 +9,43 @@
 static IWzPropertyPtr g_pPropMinute;
 static IWzPropertyPtr g_pPropSecond;
 
-void DrawDuration(IWzCanvasPtr pCanvas, int nSeconds, int nX = 0, int nY = 0) {
+static IWzPropertyPtr LoadCooldownProperty(const wchar_t* customPath, const wchar_t* nativePath) {
+    try {
+        IWzPropertyPtr property = get_rm()->GetObjectA(customPath).GetUnknown();
+        if (property) {
+            return property;
+        }
+    } catch (...) {
+    }
+
+    try {
+        return get_rm()->GetObjectA(nativePath).GetUnknown();
+    } catch (...) {
+        return nullptr;
+    }
+}
+
+void InitializeTempStatAssets() {
+    if (g_pPropMinute && g_pPropSecond) {
+        return;
+    }
+
     if (!g_pPropMinute) {
-        g_pPropMinute = get_rm()->GetObjectA(L"UI/UIWindowEx.img/SkillCooldownNumber/0").GetUnknown();
+        g_pPropMinute = LoadCooldownProperty(
+                L"Custom/UI/UIWindowEx.img/SkillCooldownNumber/0",
+                L"UI/UIWindowEx.img/SkillCooldownNumber/0");
     }
     if (!g_pPropSecond) {
-        g_pPropSecond = get_rm()->GetObjectA(L"UI/UIWindowEx.img/SkillCooldownNumber/2").GetUnknown();
+        g_pPropSecond = LoadCooldownProperty(
+                L"Custom/UI/UIWindowEx.img/SkillCooldownNumber/2",
+                L"UI/UIWindowEx.img/SkillCooldownNumber/2");
+    }
+}
+
+void DrawDuration(IWzCanvasPtr pCanvas, int nSeconds, int nX = 0, int nY = 0) {
+    InitializeTempStatAssets();
+    if (!pCanvas || !g_pPropMinute || !g_pPropSecond) {
+        return;
     }
     IWzPropertyPtr pBase;
     int nValue;
@@ -40,7 +71,7 @@ void DrawDuration(IWzCanvasPtr pCanvas, int nSeconds, int nX = 0, int nY = 0) {
 
 static auto TEMPORARY_STAT__UpdateShadowIndex = 0x007B44F4;
 void __fastcall TEMPORARY_STAT__UpdateShadowIndex_hook(CTemporaryStatView::TEMPORARY_STAT* pThis, void* _EDX) {
-    if (pThis->bNoShadow) {
+    if (!pThis || pThis->bNoShadow || !pThis->pLayerShadow || !CUIStatusBar::GetInstance()) {
         return;
     }
     int nSeconds = pThis->tLeft / 1000;
@@ -81,11 +112,13 @@ struct CUIStatusBar__DrawSkillCooltime_stack {
 
 void __stdcall CUIStatusBar__DrawSkillCooltime_helper(CUIStatusBar__DrawSkillCooltime_stack* p, int nSeconds, int nIndex) {
     // hijack pnLastIndex (m_aFuncKeyMappedSkillCooltime[i]) to store nSeconds
-    if (nIndex < 0 || *p->pnLastIndex == nSeconds) {
+    CUIStatusBar* statusBar = CUIStatusBar::GetInstance();
+    if (!p || !p->pnLastIndex || !p->pCanvas || !statusBar || nIndex < 0 || nIndex >= 16 ||
+            *p->pnLastIndex == nSeconds) {
         return;
     }
     *p->pnLastIndex = nSeconds;
-    p->pCanvas->Copy(p->nCanvasX, p->nCanvasY, CUIStatusBar::GetInstance()->m_aCanvasSkillCooltime[nIndex]);
+    p->pCanvas->Copy(p->nCanvasX, p->nCanvasY, statusBar->m_aCanvasSkillCooltime[nIndex]);
     DrawDuration(p->pCanvas, nSeconds, p->nCanvasX, p->nCanvasY);
 }
 

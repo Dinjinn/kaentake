@@ -4,14 +4,16 @@
 #include <windows.h>
 
 
+constexpr int AVATAR_EQUIP_SLOTS = 60;
+
 #pragma pack(push, 1)
 struct AvatarLook : public ZRefCounted {
     unsigned char nGender;
     int nSkin;
     int nFace;
     int nWeaponStickerID;
-    int anHairEquip[60];
-    int anUnseenEquip[60];
+    int anHairEquip[AVATAR_EQUIP_SLOTS];
+    int anUnseenEquip[AVATAR_EQUIP_SLOTS];
     int anPetID[3];
 };
 #pragma pack(pop)
@@ -36,11 +38,15 @@ struct ITEMEFFECTLAYER {
     int nItemID;
     int nAction;
     int bFlip;
+    // WeaponTint key the layer was last built with, so a tint change alone
+    // invalidates the cache even when item/action/flip did not move.
+    unsigned int uTintKey;
     USERLAYER l;
 
     void Reset() {
         nItemID = 0;
         nAction = 0;
+        uTintKey = 0;
         l.pLayer = nullptr;
     }
 };
@@ -52,6 +58,8 @@ public:
         int bBlinking;
         POINT ptBodyRelMove;
         int nRidingChairID;
+        int nCustomMovementSet;
+        int nNativeMoveAction;
         ITEMEFFECTLAYER aItemEffectLayer[60];
     };
 

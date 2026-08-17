@@ -11,6 +11,27 @@ protected:
     unsigned short m_uRawSeq;
     unsigned short m_uDataLen;
     size_t m_uOffset;
+
+public:
+    size_t GetOffset() const {
+        return m_uOffset;
+    }
+    void SetOffset(size_t uOffset) {
+        m_uOffset = uOffset;
+    }
+    bool CanRead(size_t uSize) const {
+        return m_uOffset + uSize <= m_uLength;
+    }
+    const unsigned char* CurrentPublic() const {
+        return &m_aRecvBuff[m_uOffset];
+    }
+    template <typename T>
+    T Decode() {
+        T v{};
+        memcpy(&v, &m_aRecvBuff[m_uOffset], sizeof(T));
+        m_uOffset += sizeof(T);
+        return v;
+    }
 };
 
 static_assert(sizeof(CInPacket) == 0x18);

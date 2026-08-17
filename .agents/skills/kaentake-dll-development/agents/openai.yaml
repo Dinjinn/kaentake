@@ -1,0 +1,4 @@
+interface:
+  display_name: "Kaentake DLL Development"
+  short_description: "Build safe, ABI-correct Kaentake DLL hooks"
+  default_prompt: "Use $kaentake-dll-development to implement this Kaentake DLL change safely."

@@ -4,6 +4,7 @@
 #include "wvs/util.h"
 #include "ztl/ztl.h"
 #include <windows.h>
+#include "constants.h"
 
 
 class CWndMan : public CWnd, public TSingleton<CWndMan, 0x00BEC20C> {
