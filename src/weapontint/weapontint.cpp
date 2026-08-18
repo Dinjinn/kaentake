@@ -682,7 +682,7 @@ void SwapEffectSubtrees(IWzPropertyPtr pNode, const WeaponTint& t, int depth) {
     if (!pNode || depth > 4)
         return;
     for (const std::wstring& name : ChildNames(pNode)) {
-        IUnknownPtr pUnk = get_unknown(pNode->item[name.c_str()]);
+        IUnknownPtr pUnk = ZtlVariant(pNode->item[name.c_str()]).get_unknown();
         if (!pUnk)
             continue;
         const bool isEffect = IsEffectPart(name.c_str());
@@ -734,8 +734,8 @@ void SwapSubtree(IWzPropertyPtr pNode, const WeaponTint& t, int depth, Layer lay
         if (layer == Layer::Body && IsEffectPart(name.c_str()))
             continue;
 
-        Ztl_variant_t v = pNode->item[name.c_str()];
-        IUnknownPtr pUnk = get_unknown(v);
+        ZtlVariant value = pNode->item[name.c_str()];
+        IUnknownPtr pUnk = value.get_unknown();
         if (!pUnk)
             continue; // delay / z ints, origin vectors
 

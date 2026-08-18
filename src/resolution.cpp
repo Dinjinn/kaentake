@@ -505,10 +505,10 @@ public:
 
 void CMapLoadable::RestoreViewRange_hook() {
     auto pSpace2D = CWvsPhysicalSpace2D::GetInstance();
-    m_rcViewRange.left = get_int32(m_pPropFieldInfo->item[L"VRLeft"], pSpace2D->m_rcMBR.left - 20) + get_screen_width() / 2;
-    m_rcViewRange.top = get_int32(m_pPropFieldInfo->item[L"VRTop"], pSpace2D->m_rcMBR.top - 60) + get_screen_height() / 2;
-    m_rcViewRange.right = get_int32(m_pPropFieldInfo->item[L"VRRight"], pSpace2D->m_rcMBR.right + 20) - get_screen_width() / 2;
-    m_rcViewRange.bottom = get_int32(m_pPropFieldInfo->item[L"VRBottom"], pSpace2D->m_rcMBR.bottom + 190) - get_screen_height() / 2;
+    m_rcViewRange.left = ZtlVariant(m_pPropFieldInfo->item[L"VRLeft"]).get_int32(pSpace2D->m_rcMBR.left - 20) + get_screen_width() / 2;
+    m_rcViewRange.top = ZtlVariant(m_pPropFieldInfo->item[L"VRTop"]).get_int32(pSpace2D->m_rcMBR.top - 60) + get_screen_height() / 2;
+    m_rcViewRange.right = ZtlVariant(m_pPropFieldInfo->item[L"VRRight"]).get_int32(pSpace2D->m_rcMBR.right + 20) - get_screen_width() / 2;
+    m_rcViewRange.bottom = ZtlVariant(m_pPropFieldInfo->item[L"VRBottom"]).get_int32(pSpace2D->m_rcMBR.bottom + 190) - get_screen_height() / 2;
     if (m_rcViewRange.right - m_rcViewRange.left <= 0) {
         int mid = (m_rcViewRange.left + m_rcViewRange.right) / 2;
         m_rcViewRange.left = mid;

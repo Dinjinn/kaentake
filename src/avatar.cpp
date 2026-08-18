@@ -105,7 +105,7 @@ void CUser::SetActivePortableChair_hook(int nItemID) {
         return;
     }
     // Resolve tamingMob property
-    int nTamingMob = get_int32(pInfo->item[L"tamingMob"], 0);
+    int nTamingMob = ZtlVariant(pInfo->item[L"tamingMob"]).get_int32();
     if (nTamingMob && nTamingMob / 1000 == TAMINGMOB_ID_PREFIX) {
         m_CAvatar.m_pCustomData->nRidingChairID = nTamingMob;
         m_CAvatar.SetRidingVehicle_hook(nTamingMob);

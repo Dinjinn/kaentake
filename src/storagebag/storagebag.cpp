@@ -462,7 +462,7 @@ public:
     // Load a UI.wz canvas by path (links auto-resolved; null-safe).
     static IWzCanvasPtr LoadSprite(const wchar_t* p) {
         IWzCanvasPtr c;
-        try { c = get_unknown(get_rm()->GetObjectA(const_cast<wchar_t*>(p))); } catch (...) {}
+        try { c = ZtlVariant(get_rm()->GetObjectA(const_cast<wchar_t*>(p))).as_com<IWzCanvasPtr>(); } catch (...) {}
         return c;
     }
     // Opaque blit (background — must cover the world behind it).

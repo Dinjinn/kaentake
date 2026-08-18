@@ -24,7 +24,7 @@ void CField::ShowMobHPTag_hook(unsigned int dwMobID, int nColor, int nBgColor, i
 
     // Draw background
     if (!g_pCanvasHpBack) {
-        g_pCanvasHpBack = get_unknown(get_rm()->GetObjectA(L"UI/UIWindowEx.img/MobHPRatioInfo/mob/0/backgrnd"));
+        g_pCanvasHpBack = ZtlVariant(get_rm()->GetObjectA(L"UI/UIWindowEx.img/MobHPRatioInfo/mob/0/backgrnd")).as_com<IWzCanvasPtr>();
     }
     pCanvas->Copy(0, 37, g_pCanvasHpBack);
 

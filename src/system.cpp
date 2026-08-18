@@ -2,6 +2,7 @@
 #include "crashlog.h"
 #include "hook.h"
 #include "constants.h"
+#include "util/log.h"
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -13,12 +14,29 @@
 #pragma comment(lib, "ws2_32.lib")
 
 
-typedef decltype(&SetUnhandledExceptionFilter) SetUnhandledExceptionFilter_t;
-static SetUnhandledExceptionFilter_t SetUnhandledExceptionFilter_orig = reinterpret_cast<SetUnhandledExceptionFilter_t>(GetAddress("KERNEL32", "SetUnhandledExceptionFilter"));
+namespace ClientAddress {
+
+inline constexpr uintptr_t ZExceptionHandler_SetFilterReturn = 0x00796FDD;
+
+} // namespace ClientAddress
+
+namespace SystemApi {
+
+using SetUnhandledExceptionFilterFn = decltype(&SetUnhandledExceptionFilter);
+using CreateMutexAFn = decltype(&CreateMutexA);
+using CreateWindowExAFn = decltype(&CreateWindowExA);
+using RegCreateKeyExAFn = decltype(&RegCreateKeyExA);
+using WSPStartupFn = decltype(&WSPStartup);
+
+} // namespace SystemApi
+
+static SystemApi::SetUnhandledExceptionFilterFn SetUnhandledExceptionFilter_orig =
+        reinterpret_cast<SystemApi::SetUnhandledExceptionFilterFn>(GetAddress("KERNEL32", "SetUnhandledExceptionFilter"));
 
 LPTOP_LEVEL_EXCEPTION_FILTER WINAPI SetUnhandledExceptionFilter_hook(LPTOP_LEVEL_EXCEPTION_FILTER lpTopLevelExceptionFilter) {
     // ZExceptionHandler::ZExceptionHandler - after dynamic initializers for ZAllocEx<T>::_s_alloc
-    if (reinterpret_cast<uintptr_t>(_ReturnAddress()) == 0x00796FDD) {
+    if (reinterpret_cast<uintptr_t>(_ReturnAddress()) == ClientAddress::ZExceptionHandler_SetFilterReturn) {
+        Kaentake::Log::Initialize();
         AttachClientHooks();
     }
     SetCrashLoggerFallback(lpTopLevelExceptionFilter);
@@ -26,8 +44,8 @@ LPTOP_LEVEL_EXCEPTION_FILTER WINAPI SetUnhandledExceptionFilter_hook(LPTOP_LEVEL
 }
 
 
-typedef decltype(&CreateMutexA) CreateMutexA_t;
-static CreateMutexA_t CreateMutexA_orig = reinterpret_cast<CreateMutexA_t>(GetAddress("KERNEL32", "CreateMutexA"));
+static SystemApi::CreateMutexAFn CreateMutexA_orig =
+        reinterpret_cast<SystemApi::CreateMutexAFn>(GetAddress("KERNEL32", "CreateMutexA"));
 
 HANDLE WINAPI CreateMutexA_hook(LPSECURITY_ATTRIBUTES lpMutexAttributes, BOOL bInitialOwner, LPCSTR lpName) {
     DEBUG_MESSAGE("CreateMutexA : %s", lpName);
@@ -41,8 +59,8 @@ HANDLE WINAPI CreateMutexA_hook(LPSECURITY_ATTRIBUTES lpMutexAttributes, BOOL bI
 }
 
 
-typedef decltype(&CreateWindowExA) CreateWindowExA_t;
-static CreateWindowExA_t CreateWindowExA_orig = reinterpret_cast<CreateWindowExA_t>(GetAddress("USER32", "CreateWindowExA"));
+static SystemApi::CreateWindowExAFn CreateWindowExA_orig =
+        reinterpret_cast<SystemApi::CreateWindowExAFn>(GetAddress("USER32", "CreateWindowExA"));
 static WNDPROC g_WndProc;
 
 LRESULT WndProc_hook(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
@@ -117,16 +135,16 @@ HWND WINAPI CreateWindowExA_hook(DWORD dwExStyle, LPCSTR lpClassName, LPCSTR lpW
 }
 
 
-typedef decltype(&RegCreateKeyExA) RegCreateKeyExA_t;
-static RegCreateKeyExA_t RegCreateKeyExA_orig = reinterpret_cast<RegCreateKeyExA_t>(GetAddress("ADVAPI32", "RegCreateKeyExA"));
+static SystemApi::RegCreateKeyExAFn RegCreateKeyExA_orig =
+        reinterpret_cast<SystemApi::RegCreateKeyExAFn>(GetAddress("ADVAPI32", "RegCreateKeyExA"));
 
 LSTATUS WINAPI RegCreateKeyExA_hook(HKEY hKey, LPCSTR lpSubKey, DWORD Reserved, LPSTR lpClass, DWORD dwOptions, REGSAM samDesired, const LPSECURITY_ATTRIBUTES lpSecurityAttributes, PHKEY phkResult, LPDWORD lpdwDisposition) {
     return RegCreateKeyExA_orig(HKEY_CURRENT_USER, lpSubKey, Reserved, lpClass, dwOptions, samDesired, lpSecurityAttributes, phkResult, lpdwDisposition);
 }
 
 
-typedef decltype(&WSPStartup) WSPStartup_t;
-static WSPStartup_t WSPStartup_orig = reinterpret_cast<WSPStartup_t>(GetAddress("MSWSOCK", "WSPStartup"));
+static SystemApi::WSPStartupFn WSPStartup_orig =
+        reinterpret_cast<SystemApi::WSPStartupFn>(GetAddress("MSWSOCK", "WSPStartup"));
 static WSPPROC_TABLE g_ProcTable;
 static ULONG g_uNexonAddress;
 

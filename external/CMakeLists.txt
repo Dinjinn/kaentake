@@ -20,6 +20,14 @@ target_include_directories(StackWalker PUBLIC
 )
 target_link_libraries(StackWalker PUBLIC dbghelp)
 
+# Build spdlog as a static dependency. Keep its optional targets out of the
+# injected DLL build and expose only the namespaced library target.
+set(SPDLOG_BUILD_EXAMPLE OFF CACHE BOOL "" FORCE)
+set(SPDLOG_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(SPDLOG_BUILD_BENCH OFF CACHE BOOL "" FORCE)
+set(SPDLOG_INSTALL OFF CACHE BOOL "" FORCE)
+add_subdirectory(spdlog)
+
 
 # Build WzLib
 add_subdirectory(WzLib)

@@ -1345,7 +1345,7 @@ IWzGr2DLayer* CreateEffectLayer(void* pAvatar, int itemId, const wchar_t* action
     // `pos` (0 body, 1 face, 2 center, 3 ground) says which anchor the node's origins are
     // measured from. Only the face case has a distinct vector on a DLL-owned avatar.
     int nPos = 0;
-    try { nPos = get_int32(node->item[L"pos"], 0); } catch (...) {}
+    try { nPos = ZtlVariant(node->item[L"pos"]).get_int32(); } catch (...) {}
     const size_t offOrigin = (nPos == 1) ? kOff_AvatarFaceOrigin : kOff_AvatarBodyOrigin;
 
     void* pOrigin = *reinterpret_cast<void**>(reinterpret_cast<char*>(pAvatar) + offOrigin);
@@ -1757,7 +1757,7 @@ public:
 
     static IWzCanvasPtr LoadSprite(const wchar_t* p) {
         IWzCanvasPtr c;
-        try { c = get_unknown(get_rm()->GetObjectA(const_cast<wchar_t*>(p))); } catch (...) {}
+        try { c = ZtlVariant(get_rm()->GetObjectA(const_cast<wchar_t*>(p))).as_com<IWzCanvasPtr>(); } catch (...) {}
         return c;
     }
     static void BlitA(IWzCanvasPtr dst, IWzCanvasPtr src, int x, int y) {

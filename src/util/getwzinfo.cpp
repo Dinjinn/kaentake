@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "ztl/ztl.h"
 
+#include <array>
 #include <string>
 #include <unordered_map>
 
@@ -47,7 +48,7 @@ inline std::string GetStr(IWzPropertyPtr p, const wchar_t* key, const char* def 
 inline int GetInt(IWzPropertyPtr p, const wchar_t* key, int def = 0) {
     if (!p)
         return def;
-    return get_int32(p->item[key], def);
+    return ZtlVariant(p->item[key]).get_int32(def);
 }
 } // namespace wz
 
@@ -60,11 +61,9 @@ std::string GetMapById(int id) {
     if (it != g_mapNames.end())
         return it->second;
 
-    static const wchar_t* categories[] = {
-        L"maple", L"victoria", L"ossyria", L"elin",
-        L"weddingGL", L"MasteriaGL", L"HalloweenGL",
-        L"jp", L"etc", L"singapore", L"event", L"Episode1GL"
-    };
+    static constexpr std::array<const wchar_t*, 12> categories{ { L"maple", L"victoria", L"ossyria", L"elin",
+            L"weddingGL", L"MasteriaGL", L"HalloweenGL",
+            L"jp", L"etc", L"singapore", L"event", L"Episode1GL" } };
 
     IWzPropertyPtr root = wz::Get(L"String/Map.img");
     if (!root)
@@ -72,9 +71,9 @@ std::string GetMapById(int id) {
 
     Ztl_bstr_t sId = std::to_wstring(id).c_str();
 
-    for (auto cat : categories) {
+    for (const auto* categoryName : categories) {
 
-        IWzPropertyPtr category = wz::GetItem(root, cat);
+        IWzPropertyPtr category = wz::GetItem(root, categoryName);
         if (!category)
             continue;
 
@@ -86,14 +85,14 @@ std::string GetMapById(int id) {
         std::string name = wz::GetStr(map, L"mapName");
 
         std::string result = street + " - " + name;
-        g_mapNames[id] = result;
+        g_mapNames.emplace(id, result);
 
         return result;
     }
 
     // cache the miss so repeated queries for an absent id don't re-walk all
     // 12 String/Map.img categories every time
-    g_mapNames[id] = "Unknown";
+    g_mapNames.emplace(id, "Unknown");
     return "Unknown";
 }
 
@@ -115,13 +114,13 @@ std::string GetMobNameById(int id) {
     IWzPropertyPtr mob = root->item[sId].GetUnknown();
     if (!mob) {
         // cache the miss so an absent id doesn't re-fetch String/Mob.img each call
-        g_mobNames[id] = "Unknown";
+        g_mobNames.emplace(id, "Unknown");
         return "Unknown";
     }
 
     std::string name = wz::GetStr(mob, L"name");
 
-    g_mobNames[id] = name;
+    g_mobNames.emplace(id, name);
     return name;
 }
 
@@ -144,7 +143,7 @@ int GetMobLevelById(int id) {
     IWzPropertyPtr info = wz::GetItem(mob, L"info");
     int level = wz::GetInt(info, L"level", 0);
 
-    g_mobLevels[id] = level;
+    g_mobLevels.emplace(id, level);
     return level;
 }
 
@@ -166,13 +165,13 @@ std::string GetNpcById(int id) {
     IWzPropertyPtr npc = root->item[sId].GetUnknown();
     if (!npc) {
         // cache the miss so an absent id doesn't re-fetch String/Npc.img each call
-        g_npcNames[id] = "Unknown";
+        g_npcNames.emplace(id, "Unknown");
         return "Unknown";
     }
 
     std::string name = wz::GetStr(npc, L"name");
 
-    g_npcNames[id] = name;
+    g_npcNames.emplace(id, name);
     return name;
 }
 
@@ -221,7 +220,7 @@ int GetCardIdByMobId(int mobId) {
         int mob = wz::GetInt(info, L"mob", 0);
 
         if (mob == mobId) {
-            g_mobToCard[mobId] = cardId;
+            g_mobToCard.emplace(mobId, cardId);
             return cardId;
         }
     }
@@ -247,7 +246,7 @@ IWzCanvasPtr GetCardIconByCardId(int cardId) {
         IWzCanvasPtr icon = get_rm()->GetObjectA(path).GetUnknown();
 
         if (icon) {
-            g_cardIcons[cardId] = icon;
+            g_cardIcons.emplace(cardId, icon);
             return icon;
         }
 

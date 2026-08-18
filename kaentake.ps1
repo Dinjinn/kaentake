@@ -108,23 +108,23 @@ function Get-GameDirectory {
     return $resolved
 }
 
-function Deploy-Kaentake {
-    param([ValidateSet('debug', 'release')] [string]$RequestedConfiguration)
-
+function Assert-GameNotRunning {
     $gameProcesses = Get-Process -Name MapleStory -ErrorAction SilentlyContinue
     if ($gameProcesses) {
         throw 'MapleStory is running. Close it before deploying.'
     }
+}
+
+function Publish-KaentakeArtifacts {
+    param([Parameter(Mandatory)] $Build)
 
     $gameDirectory = Get-GameDirectory
-    $build = Invoke-KaentakeBuild $RequestedConfiguration
-    $artifactNames = @('Kaentake.exe', 'Kaentake.dll', 'Kaentake.pdb', 'Kaentake-launcher.pdb')
+    $artifactNames = @('Kaentake.exe', 'Kaentake.dll')
     $copied = 0
 
     foreach ($name in $artifactNames) {
-        $source = Join-Path $build.OutputDir $name
+        $source = Join-Path $Build.OutputDir $name
         if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
-            if ($name.EndsWith('.pdb')) { continue }
             throw "Required build artifact is missing: $source"
         }
 
@@ -141,10 +141,19 @@ function Deploy-Kaentake {
     }
 
     if ($WhatIfPreference) {
-        Write-Host "Deployment dry run complete for '$gameDirectory'. Custom.wz would not be changed."
+        Write-Host "Publish dry run complete for '$gameDirectory'. Only Kaentake.exe and Kaentake.dll were considered."
     } else {
-        Write-Host "Deployment complete: $copied runtime artifact(s) copied to '$gameDirectory'. Custom.wz was not changed."
+        Write-Host "Published $copied runtime artifact(s) to '$gameDirectory'. No PDB or Custom.wz file was copied."
     }
+}
+
+function Invoke-KaentakeBuildAndPublish {
+    param([ValidateSet('debug', 'release')] [string]$RequestedConfiguration)
+
+    Assert-GameNotRunning
+    $build = Invoke-KaentakeBuild $RequestedConfiguration
+    Publish-KaentakeArtifacts $build
+    return $build
 }
 
 switch ($Command) {
@@ -155,15 +164,15 @@ switch ($Command) {
         Save-GameDirectory $GameDir
     }
     'build' {
-        $result = Invoke-KaentakeBuild $Configuration
-        Write-Host "Build complete: $($result.OutputDir)"
+        $result = Invoke-KaentakeBuildAndPublish $Configuration
+        Write-Host "Build and publish complete: $($result.OutputDir)"
     }
     'check' {
-        Invoke-KaentakeBuild debug | Out-Null
-        Invoke-KaentakeBuild release | Out-Null
-        Write-Host 'Debug and Release checks passed.'
+        Invoke-KaentakeBuildAndPublish debug | Out-Null
+        Invoke-KaentakeBuildAndPublish release | Out-Null
+        Write-Host 'Debug and Release checks passed and both builds were published in order.'
     }
     'deploy' {
-        Deploy-Kaentake $Configuration
+        Invoke-KaentakeBuildAndPublish $Configuration | Out-Null
     }
 }

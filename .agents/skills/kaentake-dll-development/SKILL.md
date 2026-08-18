@@ -18,9 +18,10 @@ description: Develop, refactor, diagnose, or review the Windows x86 Kaentake inj
 
 - Avoid allocation in hooks, render/update loops, packet paths, and other hot paths.
 - Reuse storage. Prefer `std::span`, `std::string_view`, fixed arrays, stack buffers, moves, and caller-owned output when lifetimes permit.
-- Use shared `ZXString`, `ZArray`, `ZList`, and `ZMap` facilities. Improve the shared implementation instead of cloning it inside a feature.
+- Use `ZXString`, `ZArray`, `ZList`, `ZMap`, and other ZTL types when interacting with client-owned objects, calling client functions, or matching client ABI and ownership. Improve the shared ZTL implementation instead of cloning it inside a feature.
+- Prefer STL containers, strings, algorithms, and ownership types for isolated plugin-owned functionality once data has crossed a typed client boundary. Convert explicitly at that boundary; do not propagate ZTL types through code that has no client interoperability requirement.
 - Standardize aliases as `ZXStringA = ZXString<char>` and `ZXStringW = ZXString<wchar_t>`. Assert that `wchar_t` is 16 bits; do not invent `ZXString<char16_t>` without matching client allocator/string support.
-- Add non-owning `begin`/`end` or range adapters for ZTL collections without changing their object layout or allocator.
+- When client-backed ZTL collections must be consumed by plugin logic, prefer non-owning `begin`/`end`, ranges, views, or typed adapters without changing client object layout or allocation.
 - Do not place STL-owned objects inside client-reconstructed layouts unless IDA proves that layout and ownership.
 
 ## Use typed boundaries

@@ -136,7 +136,7 @@ int SafeGetQty(void* slot) {
 IWzCanvasPtr LoadCanvas(const wchar_t* sPath) {
     IWzCanvasPtr pCanvas;
     try {
-        pCanvas = get_unknown(get_rm()->GetObjectA(const_cast<wchar_t*>(sPath)));
+        pCanvas = ZtlVariant(get_rm()->GetObjectA(const_cast<wchar_t*>(sPath))).as_com<IWzCanvasPtr>();
     } catch (...) {
     }
     return pCanvas;

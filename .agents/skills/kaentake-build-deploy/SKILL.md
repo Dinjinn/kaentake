@@ -19,15 +19,15 @@ Run commands from the repository root through `kaentake.ps1`. Do not reconstruct
 ```
 
 - Omitted configuration means Release.
-- `build` auto-detects Visual Studio, configures Win32 in an isolated local build directory, and builds `injector` and `launcher`.
-- `check` builds both Debug and Release.
+- `build` auto-detects Visual Studio, configures Win32 in an isolated local build directory, builds `injector` and `launcher`, then publishes the selected configuration.
+- `check` builds and publishes Debug followed by Release, so Release is left in the client directory.
 - `setup` validates `MapleStory.exe` and writes ignored `.kaentake.local.json`.
-- `deploy` builds first, refuses to run while MapleStory is active, copies only EXE/DLL and available PDBs, then verifies SHA-256 hashes.
-- Deployment intentionally does not copy or alter `Custom.wz`.
+- Every build command refuses to run while MapleStory is active and publishes exactly `Kaentake.exe` and `Kaentake.dll` to the configured client, verifying SHA-256 hashes.
+- For this workspace, keep the configured client fixed at `C:\Users\guill\Desktop\V83\MapleStory`.
+- Never copy or alter PDBs or `Custom.wz`.
 
 ## Failure handling
 
 Report the failing wrapper command and its concise error. Inspect the generated CMake output only when needed. Do not delete build directories or overwrite client files outside the wrapper.
 
-Use `-WhatIf` for deployment validation when copying into the configured client was not explicitly requested.
-
+Use `-WhatIf` only when the user requests a dry run; normal builds are explicitly authorized to publish the EXE and DLL to the configured client.

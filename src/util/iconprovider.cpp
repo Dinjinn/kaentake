@@ -1,8 +1,9 @@
 #include "pch.h"
 #include "ztl/ztl.h"
 
-#include <unordered_map>
+#include <array>
 #include <string>
+#include <unordered_map>
 
 #include "wvs/util.h"
 #include "iconprovider.h"
@@ -72,7 +73,7 @@ IWzCanvasPtr GetMobIcon(int id) {
     if (!canvas)
         canvas = TryLoadFormatted(L"Mob/%08d.img/fly/0", id);
 
-    g_mobIcons[id] = canvas;
+    g_mobIcons.emplace(id, canvas);
     return canvas;
 }
 
@@ -92,7 +93,7 @@ IWzCanvasPtr GetNpcIcon(int id) {
     if (!canvas)
         canvas = TryLoadFormatted(L"Npc/%08d.img/stand/0", id);
 
-    g_npcIcons[id] = canvas;
+    g_npcIcons.emplace(id, canvas);
     return canvas;
 }
 
@@ -139,7 +140,7 @@ IWzCanvasPtr GetMapIcon(int mapId) {
     } catch (...) {
     }
 
-    g_mapIcons[mapId] = canvas;
+    g_mapIcons.emplace(mapId, canvas);
     return canvas;
 }
 
@@ -152,19 +153,22 @@ IWzCanvasPtr GetMapIcon(int mapId) {
 //   QuestIcon/1 = open book         -> quest IN PROGRESS           (state 3)
 // These are 44x44 — the caller scales them down to a badge.
 
-static IWzCanvasPtr g_questMarker[4];   // [1] = available, [2] = completable, [3] = in-progress
+static std::array<IWzCanvasPtr, 4> g_questMarkers; // [1] = available, [2] = completable, [3] = in-progress
+static constexpr std::array<const wchar_t*, 4> kQuestMarkerPaths{ {
+        nullptr,
+        L"UI/UIWindow.img/QuestIcon/0/0", // white bulb = available
+        L"UI/UIWindow.img/QuestIcon/2/0", // brown book = ready to turn in
+        L"UI/UIWindow.img/QuestIcon/1/0", // open book = in progress
+} };
 
 IWzCanvasPtr GetQuestMarkerIcon(int state) {
-    if (state < 1 || state > 3)
+    if (state <= 0 || state >= static_cast<int>(g_questMarkers.size()))
         return nullptr;
-    if (!g_questMarker[state]) {
-        const wchar_t* path =
-            (state == 2) ? L"UI/UIWindow.img/QuestIcon/2/0" :   // brown book = ready to turn in
-            (state == 3) ? L"UI/UIWindow.img/QuestIcon/1/0" :   // open book  = in progress
-                           L"UI/UIWindow.img/QuestIcon/0/0";    // white bulb = available
-        g_questMarker[state] = LoadCanvas(path);
-    }
-    return g_questMarker[state];
+
+    auto& marker = g_questMarkers[state];
+    if (!marker)
+        marker = LoadCanvas(kQuestMarkerPaths[state]);
+    return marker;
 }
 
 // =====================================================
@@ -179,4 +183,3 @@ void ClearEntityIconCache() {
 void ClearMapIconCache() {
     g_mapIcons.clear();
 }
-

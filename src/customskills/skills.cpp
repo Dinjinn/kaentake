@@ -241,7 +241,7 @@ int GetWzInt(IWzPropertyPtr property, const wchar_t* name) {
         return 0;
     }
     try {
-        return get_int32(property->item[name], 0);
+        return ZtlVariant(property->item[name]).get_int32();
     } catch (...) {
         return 0;
     }

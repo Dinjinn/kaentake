@@ -217,7 +217,7 @@ bool IsCashEquip(int itemId) {
             LOG_ONCE("coloringprism: no WZ info node for item %d", itemId);
             return false;
         }
-        return get_int32(p->item[L"cash"], 0) != 0;
+        return ZtlVariant(p->item[L"cash"]).get_int32() != 0;
     } catch (...) {
         return false;
     }
@@ -515,7 +515,7 @@ public:
 
     static IWzCanvasPtr LoadSprite(const wchar_t* p) {
         IWzCanvasPtr c;
-        try { c = get_unknown(get_rm()->GetObjectA(const_cast<wchar_t*>(p))); } catch (...) {}
+        try { c = ZtlVariant(get_rm()->GetObjectA(const_cast<wchar_t*>(p))).as_com<IWzCanvasPtr>(); } catch (...) {}
         return c;
     }
     static void BlitAt(IWzCanvasPtr dst, IWzCanvasPtr src, int x, int y) {
@@ -977,7 +977,7 @@ bool ItemNameOf(int itemId, char* out, size_t cap) {
 
     auto take = [&](IWzPropertyPtr pNode) -> bool {
         if (!pNode) return false;
-        Ztl_bstr_t name = pNode->item[L"name"];
+        Ztl_bstr_t name(pNode->item[L"name"]);
         const char* p = name;
         if (!p || !*p) return false;
         strncpy(out, p, cap - 1);

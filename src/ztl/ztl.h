@@ -5,6 +5,7 @@
 #include "zcoll.h"
 #include "zstr.h"
 #include "zcom.h"
+#include "zvariant.h"
 #include <windows.h>
 #include <new>
 

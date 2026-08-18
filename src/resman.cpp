@@ -120,7 +120,8 @@ void CWvsApp::InitializeResMan_hook() {
                 if (FAILED(pEnum->Next(1, &vNext, &uCeltFetched)) || uCeltFetched == 0) {
                     break;
                 }
-                Ztl_bstr_t sUOL = (sPath.length() > 0 ? sPath + L"/" : L"") + V_BSTR(&vNext);
+                Ztl_bstr_t sUOL = sPath.length() > 0 ? sPath + L"/" : Ztl_bstr_t(L"");
+                sUOL += V_BSTR(&vNext);
                 Ztl_variant_t vObj = get_rm()->GetObjectA(L"Custom/" + sUOL);
                 IUnknownPtr pUnk = vObj.GetUnknown();
                 if (pUnk) {

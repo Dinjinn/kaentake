@@ -217,7 +217,7 @@ IWzCanvasPtr CUIFusionAnvil::LoadSprite(const wchar_t* sPath) {
     // mismatched type and leaves the canvas pointer un-initialised.
     IWzCanvasPtr pCanvas;
     try {
-        pCanvas = get_unknown(get_rm()->GetObjectA(const_cast<wchar_t*>(sPath)));
+        pCanvas = ZtlVariant(get_rm()->GetObjectA(const_cast<wchar_t*>(sPath))).as_com<IWzCanvasPtr>();
     } catch (...) {}
     return pCanvas;
 }

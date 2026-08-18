@@ -128,8 +128,8 @@ int IntValue(IWzProperty* parent, const wchar_t* name, int fallback) {
     if (!parent)
         return fallback;
     try {
-        Ztl_variant_t value = parent->item[name];
-        return get_int32(value, fallback);
+        ZtlVariant value = parent->item[name];
+        return value.get_int32(fallback);
     } catch (...) {
         return fallback;
     }

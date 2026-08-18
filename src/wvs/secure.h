@@ -1,5 +1,12 @@
 #pragma once
 #include "ztl/ztl.h"
+
+#include <array>
+#include <bit>
+#include <cassert>
+#include <cstdint>
+#include <cstdlib>
+#include <cstring>
 #include <type_traits>
 
 
@@ -83,40 +90,85 @@ static_assert(sizeof(TSecType<unsigned char>) == 0xC);
 static_assert(sizeof(TSecType<unsigned int>) == 0xC);
 
 
+inline constexpr std::uint32_t kZtlSecureMask = 0xBAADF00D;
+
 template <typename T>
-unsigned int __fastcall ZtlSecureTear(T* at, T t) {
-    typedef std::conditional<(sizeof(T) < 4), unsigned char, unsigned int>::type V;
-    constexpr unsigned int iteration = sizeof(T) / sizeof(V);
-    constexpr unsigned int rotation = sizeof(T) < 4 ? 0 : 5;
-    unsigned int checksum = 0xBAADF00D;
-    V* v1 = reinterpret_cast<V*>(&at[0]);
-    V* v2 = reinterpret_cast<V*>(&at[1]);
-    V* value = reinterpret_cast<V*>(&t);
-    for (size_t i = 0; i < iteration; ++i) {
-        v1[i] = rand();
-        v2[i] = _rotr(value[i] ^ v1[i], rotation);
-        checksum = v2[i] + _rotr(v1[i] ^ checksum, 5);
+std::uint32_t __fastcall ZtlSecureTear(T* at, T value) {
+    static_assert(std::is_trivially_copyable_v<T>);
+
+    std::uint32_t checksum = kZtlSecureMask;
+    if constexpr ((sizeof(T) % sizeof(std::uint32_t)) == 0) {
+        constexpr std::size_t blockCount = sizeof(T) / sizeof(std::uint32_t);
+        const auto plain = std::bit_cast<std::array<std::uint32_t, blockCount>>(value);
+        std::array<std::uint32_t, blockCount> keys{};
+        std::array<std::uint32_t, blockCount> encoded{};
+
+        for (std::size_t i = 0; i < blockCount; ++i) {
+            keys[i] = static_cast<std::uint32_t>(rand());
+            encoded[i] = std::rotr(plain[i] ^ keys[i], 5);
+            checksum = encoded[i] + std::rotr(keys[i] ^ checksum, 5);
+        }
+
+        std::memcpy(&at[0], keys.data(), sizeof(T));
+        std::memcpy(&at[1], encoded.data(), sizeof(T));
+    } else {
+        constexpr std::size_t blockCount = sizeof(T);
+        const auto plain = std::bit_cast<std::array<std::uint8_t, blockCount>>(value);
+        std::array<std::uint8_t, blockCount> keys{};
+        std::array<std::uint8_t, blockCount> encoded{};
+
+        for (std::size_t i = 0; i < blockCount; ++i) {
+            keys[i] = static_cast<std::uint8_t>(rand());
+            encoded[i] = plain[i] ^ keys[i];
+            checksum = encoded[i] + std::rotr(static_cast<std::uint32_t>(keys[i]) ^ checksum, 5);
+        }
+
+        std::memcpy(&at[0], keys.data(), sizeof(T));
+        std::memcpy(&at[1], encoded.data(), sizeof(T));
     }
     return checksum;
 }
 
 template <typename T>
-T __fastcall ZtlSecureFuse(T* at, unsigned int cs) {
-    typedef std::conditional<(sizeof(T) < 4), unsigned char, unsigned int>::type V;
-    constexpr unsigned int iteration = sizeof(T) / sizeof(V);
-    constexpr unsigned int rotation = sizeof(T) < 4 ? 0 : 5;
-    unsigned int checksum = 0xBAADF00D;
-    V* v1 = reinterpret_cast<V*>(&at[0]);
-    V* v2 = reinterpret_cast<V*>(&at[1]);
-    V value[iteration] = { 0 };
-    for (size_t i = 0; i < iteration; ++i) {
-        value[i] = v1[i] ^ _rotl(v2[i], rotation);
-        checksum = v2[i] + _rotr(v1[i] ^ checksum, 5);
-    }
+T __fastcall ZtlSecureFuse(const T* at, std::uint32_t expectedChecksum) {
+    static_assert(std::is_trivially_copyable_v<T>);
+
+    std::uint32_t checksum = kZtlSecureMask;
+    if constexpr ((sizeof(T) % sizeof(std::uint32_t)) == 0) {
+        constexpr std::size_t blockCount = sizeof(T) / sizeof(std::uint32_t);
+        std::array<std::uint32_t, blockCount> keys{};
+        std::array<std::uint32_t, blockCount> encoded{};
+        std::array<std::uint32_t, blockCount> plain{};
+        std::memcpy(keys.data(), &at[0], sizeof(T));
+        std::memcpy(encoded.data(), &at[1], sizeof(T));
+
+        for (std::size_t i = 0; i < blockCount; ++i) {
+            plain[i] = keys[i] ^ std::rotl(encoded[i], 5);
+            checksum = encoded[i] + std::rotr(keys[i] ^ checksum, 5);
+        }
+
 #ifdef _DEBUG
-    assert(checksum == cs);
+        assert(checksum == expectedChecksum);
 #endif
-    return *reinterpret_cast<T*>(&value[0]);
+        return std::bit_cast<T>(plain);
+    } else {
+        constexpr std::size_t blockCount = sizeof(T);
+        std::array<std::uint8_t, blockCount> keys{};
+        std::array<std::uint8_t, blockCount> encoded{};
+        std::array<std::uint8_t, blockCount> plain{};
+        std::memcpy(keys.data(), &at[0], sizeof(T));
+        std::memcpy(encoded.data(), &at[1], sizeof(T));
+
+        for (std::size_t i = 0; i < blockCount; ++i) {
+            plain[i] = keys[i] ^ encoded[i];
+            checksum = encoded[i] + std::rotr(static_cast<std::uint32_t>(keys[i]) ^ checksum, 5);
+        }
+
+#ifdef _DEBUG
+        assert(checksum == expectedChecksum);
+#endif
+        return std::bit_cast<T>(plain);
+    }
 }
 
 template <typename T>
@@ -124,11 +176,11 @@ struct ZtlSecure {
     T at[2];
     unsigned int cs;
 
-    operator T() {
+    operator T() const {
         return ZtlSecureFuse<T>(at, cs);
     }
     ZtlSecure& operator=(const T& value) {
-        cs = ZtlSecureTear<T>(at, t);
+        cs = ZtlSecureTear<T>(at, value);
         return *this;
     }
 };
@@ -139,12 +191,17 @@ struct ZtlSecurePacked {
     T at[2];
     unsigned int cs;
 
-    operator T() {
+    operator T() const {
         return ZtlSecureFuse<T>(at, cs);
     }
     ZtlSecurePacked& operator=(const T& value) {
-        cs = ZtlSecureTear<T>(at, t);
+        cs = ZtlSecureTear<T>(at, value);
         return *this;
     }
 };
 #pragma pack(pop)
+
+static_assert(sizeof(ZtlSecure<std::uint8_t>) == 0x8);
+static_assert(sizeof(ZtlSecure<std::int16_t>) == 0x8);
+static_assert(sizeof(ZtlSecure<std::int32_t>) == 0xC);
+static_assert(sizeof(ZtlSecurePacked<std::uint8_t>) == 0x6);

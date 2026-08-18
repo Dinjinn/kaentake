@@ -70,32 +70,7 @@ void AttachDamageRankHotkey();
 void AttachRainbowNames();
 void AttachCustomActions();
 
-inline void AttachClientHooks() {
-    AttachClientBypass();
-    AttachAutoLoginHooks();
-    AttachCustomSkills();
-    AttachClientInlink();
-    AttachStringPoolMod();
-    AttachResManMod();
-    AttachCustomActions();
-    AttachAvatarDataMod();
-    AttachItemEffectMod();
-    AttachResolutionMod();
-    AttachMobHpTagMod();
-    AttachToolTipMod();
-    AttachIconIconMod();
-    AttachTempStatMod();
-    AttachBagWindowMod();
-    AttachFusionAnvilMod();
-    AttachGameMods();
-    AttachWeaponTintMod();
-    AttachColoringPrismMod();
-    AttachCompactStorageMod();
-    AttachSlotLockMod();
-    AttachMapInfoToolTip();
-    AttachDamageRankHotkey();
-    AttachRainbowNames();
-}
+void AttachClientHooks();
 
 
 template <typename T>

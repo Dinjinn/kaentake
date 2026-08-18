@@ -27,8 +27,9 @@ add_library(injector SHARED
     compactstorage/compactstorage.cpp
     slotlock/slotlock.cpp
     worldmapinfo/worldmapinfo.cpp
-    assetutils/getwzinfo.cpp
-    assetutils/iconprovider.cpp
+    util/getwzinfo.cpp
+    util/iconprovider.cpp
+    util/log.cpp
     damagerank/uiDamageRank.cpp
     damagerank/hotkey.cpp
     rainbownames/rainbownames.cpp
@@ -44,6 +45,8 @@ target_compile_options(injector PRIVATE
     "$<$<CONFIG:Release>:/Zi>"
 )
 
+target_compile_definitions(injector PRIVATE KAENTAKE_HAS_SPDLOG)
+
 target_link_options(injector PRIVATE
     "$<$<CONFIG:Release>:/DEBUG:FULL>"
     "$<$<CONFIG:Release>:/MAP:${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/Kaentake.map>"
@@ -53,6 +56,7 @@ target_link_libraries(injector PRIVATE
     Detours
     StackWalker
     WzLib
+    spdlog::spdlog
 )
 
 set_target_properties(injector PROPERTIES
